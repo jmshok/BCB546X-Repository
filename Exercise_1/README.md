@@ -17,12 +17,18 @@ We learn that `fang_et_al_genotypes.txt` is a large file and might run into some
 
 The following commands bring us some more details about the files.
 
-> file fang_et_al_genotypes.txt
+```
+file fang_et_al_genotypes.txt
+```
+```
+wc fang_et_al_genotypes.txt
+```
 
-> wc fang_et_al_genotypes.txt
+```
+file snp_position.txt
+```
+``` 
+wc snp_position.txt
+```
 
-> file snp_position.txt
-
-> wc snp_position.txt
-
-We learn that `fang_et_al_genotypes.txt` has a large number of headers (corresponding probably to the loci).
+We learn that `fang_et_al_genotypes.txt` has a large number of columns. By using the command `wc -l` on both files we know that `fang_et_al_genotypes.txt`
