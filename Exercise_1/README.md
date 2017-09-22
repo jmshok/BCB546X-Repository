@@ -136,13 +136,13 @@ for i in {1..10}; do sort -k2 -n -r chr"$i"_maize_increasing.txt | sed 's/?/-/g'
 * 1 file with all SNPs with unknown positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > unknown_maize.txt
+awk '$3 == "unknown"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > unknown_maize.txt
 ```
 
 * 1 file with all SNPs with multiple positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > multiple_maize.txt
+awk '$3 == "multiple"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > multiple_maize.txt
 ```
 
 
@@ -166,13 +166,13 @@ for i in {1..10}; do sort -k2 -n -r chr"$i"_teosinte_increasing.txt | sed 's/?/-
 * 1 file with all SNPs with unknown positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > unknown_teosinte.txt
+awk '$3 == "unknown"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > unknown_teosinte.txt
 ```
 
 * 1 file with all SNPs with multiple positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > multiple_teosinte.txt
+awk '$3 == "multiple"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > multiple_teosinte.txt
 ```
 
 ## Let's explore the files
