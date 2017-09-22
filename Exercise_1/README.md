@@ -136,15 +136,18 @@ for i in {1..10}; do sort -k2 -n -r chr"$i"_maize_increasing.txt | sed 's/?/-/g'
 * 1 file with all SNPs with unknown positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "unknown"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > unknown_maize.txt
+awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort > unknown_ID.txt  
+join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > unknown_maize.txt
 ```
 
 * 1 file with all SNPs with multiple positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "multiple"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > multiple_maize.txt
+awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort > multiple_ID.txt 
+join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > multiple_maize.txt
 ```
 
+> (Alternatively we could have use `tee` in a single line command, it worked but prited some weird error that was not affecting the output file)
 
 ### For Teosinte:
 
@@ -166,13 +169,13 @@ for i in {1..10}; do sort -k2 -n -r chr"$i"_teosinte_increasing.txt | sed 's/?/-
 * 1 file with all SNPs with unknown positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "unknown"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > unknown_teosinte.txt
+join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > unknown_teosinte.txt
 ```
 
 * 1 file with all SNPs with multiple positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "multiple"' snp_position.txt | cut -f 1,4 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > multiple_teosinte.txt
+join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > multiple_teosinte.txt
 ```
 
 ## Let's explore the files
@@ -199,10 +202,18 @@ with a maize file as an example here.
 
 ## Copy the file in the Github repository and push
 
+The files were not created in my github repository. The 44 files wanted in this assignment need to be moved and pushed. A total of 45 files should be in the Exercise_1 folder (44 genotype files and this Markdown file). 
 
-Note to myself:
+```
+cp chr*_[tm]* multiple_[tm]* unknown_[tm]* ~/
+ls | wc -l
+cd ~/BCB546X-Repository/Exercise_1/
+git add chr*_[tm]* multiple_[tm]* unknown_[tm]*
+git commit chr*_[tm]* multiple_[tm]* unknown_[tm]*
+git push origin master
+```
 
-Unknown and Multiple not joining anymore (WTF? there were the first ones I got to work).
+Done.
 
 
 
