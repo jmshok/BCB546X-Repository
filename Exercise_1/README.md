@@ -200,7 +200,9 @@ with a maize file as an example here.
 ## Copy the file in the Github repository and push
 
 
+Note to myself:
 
+Unknown and Multiple not joining anymore (WTF? there were the first ones I got to work).
 
 
 
