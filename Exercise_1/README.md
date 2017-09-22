@@ -104,7 +104,7 @@ awk -f transpose.awk maize_genotypes.txt > transposed_maize_genotypes.txt
 
 From `snp_position.txt` we want to keep the SNPs IDs (first column) to be able to match the corresponding genotypes and the positions (fourth column) to be able to order the files as wanted. The third column will indicate the chromosomes on which the SNPs are and will help build intermediate files that will allow us to join later the SNPs IDs, nucleotide positions and the genotypes from the transposed files. ALL THE OTHER COLUMNS WILL NOT BE JOINED.
 
-To be joined the files need to be sorted. In the first command that we will use, the SNPs IDs and the nucleotide positions cut from `snp_position.txt` will first be sorted by the first column and stored in intermediate files by chromosomes (`Chr*_ID.txt`). This files will be helpful to verify if the final outputs contain the correct information.
+To be joined the files need to be sorted. In the first command that we will use, the SNPs IDs and the nucleotide positions cut from `snp_position.txt` will first be sorted by the first column and stored in intermediate files by chromosomes (`chr*_ID.txt`). This files will be helpful to verify if the final outputs contain the correct information.
 
 Then we join the intermediate SNPs IDs by chromosome files and the genotype file. It is important that transposed genotype files get sorted too. The final output needs then to be sorted by nucleotide positions, thus another `sort` command is later used (with the numerical values).
 
@@ -130,23 +130,25 @@ for i in {1..10}; do join -t $'\t' -1 1 -2 1 chr"$i"_ID.txt <(sort -k1,1 transpo
 * 10 files (1 for each chromosome) with SNPs ordered based on decreasing position values and with missing data encoded by this symbol: -
 
 ```
-for i in {1..10}; do sort -k3n -r chr"$i"_maize_increasing.txt | sed 's/?/-/g' > chr"$i"_maize_decreasing.txt; done
+for i in {1..10}; do sort -k2 -n -r chr"$i"_maize_increasing.txt | sed 's/?/-/g' > chr"$i"_maize_decreasing.txt; done
 ```
 
 * 1 file with all SNPs with unknown positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort | tee unknown_ID.txt | join -1 1 -2 1 unknown_ID.txt <(sort transposed_maize_genotypes.txt) > unknown_maize.txt
+awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > unknown_maize.txt
 ```
 
 * 1 file with all SNPs with multiple positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort | tee multiple_ID.txt | join -1 1 -2 1 multiple_ID.txt <(sort transposed_maize_genotypes.txt > multiple_maize.txt
+awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_maize_genotypes.txt) > multiple_maize.txt
 ```
 
 
 ### For Teosinte:
+
+Intermediate files with SNPs IDs based on chromosome position are already created, thus the command can be simplified.
 
 * 10 files (1 for each chromosome) with SNPs ordered based on increasing position values and with missing data encoded by this symbol: ?
 
@@ -158,20 +160,47 @@ for i in {1..10}; do join -t $'\t' -1 1 -2 1 chr"$i"_ID.txt <(sort -k1,1 transpo
 * 10 files (1 for each chromosome) with SNPs ordered based on decreasing position values and with missing data encoded by this symbol: -
 
 ```
-for i in {1..10}; do sort -k3n -r chr"$i"_teosinte_increasing.txt | sed 's/?/-/g' > chr"$i"_teosinte_decreasing.txt; done
+for i in {1..10}; do sort -k2 -n -r chr"$i"_teosinte_increasing.txt | sed 's/?/-/g' > chr"$i"_teosinte_decreasing.txt; done
 ```
 
 * 1 file with all SNPs with unknown positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort | tee unknown_ID.txt | join -1 1 -2 1 unknown_ID.txt <(sort transposed_teosinte_genotypes.txt) > unknown_teosinte.txt
+awk '$3 == "unknown"' snp_position.txt | cut -f 1 | sort -k1,1 | tee unknown_ID.txt | join -t $'\t' -1 1 -2 1 unknown_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > unknown_teosinte.txt
 ```
 
 * 1 file with all SNPs with multiple positions in the genome (these need not be ordered in any particular way)
 
 ```
-awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort | tee multiple_ID.txt | join -1 1 -2 1 multiple_ID.txt <(sort transposed_teosinte_genotypes.txt > multiple_teosinte.txt
+awk '$3 == "multiple"' snp_position.txt | cut -f 1 | sort -k1,1 | tee multiple_ID.txt | join -t $'\t' -1 1 -2 1 multiple_ID.txt <(sort -k1,1 transposed_teosinte_genotypes.txt) > multiple_teosinte.txt
 ```
+
+## Let's explore the files
+
+The `chr*_ID.txt` files contain the SNPs IDs for each live. Thus, if the joined files `"ChromosomePosition"_"BiologicalOrganisms"_"SortingOrder".txt` contain as many lines as the ID files then the merging worked. This can simply be checked with:
+
+```
+wc chr*
+wc mul*
+wc unk*
+```
+
+All the files for a particular chromosome (or unknown or multiple) have the same number of lines. 
+
+We also see that the increasing and decrasing files have the same number of characters (that was expected);
+
+Finally, to check if the files are ordered as wanted and if the missing values have the character requested we will use again:
+
+```
+cut -f 1,2,3,4,5,6,7,8,9 chr1_maize_decreasing.txt | column -t | head -n 50
+```
+
+with a maize file as an example here.
+
+## Copy the file in the Github repository and push
+
+
+
 
 
 
