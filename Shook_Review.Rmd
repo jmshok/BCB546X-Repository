@@ -1,0 +1,458 @@
+---
+title: "R Exercise EEOB 546X"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Note: In the following code I will sometimes re-import the original datasets as they are sometimes imported with or without headers. Most of the object will be overwrited but not always.
+
+## Loading the Packages
+
+```{r, warning = FALSE}
+library(reshape2)
+library(ggplot2)
+library(scales)
+```
+
+# Part I
+
+## Data Inspection
+
+The files we will be working with can be downloaded at the following links and should be placed in the working directory.
+
+https://github.com/EEOB-BioData/BCB546X-Fall2017/blob/master/UNIX_Assignment/fang_et_al_genotypes.txt
+https://github.com/EEOB-BioData/BCB546X-Fall2017/blob/master/UNIX_Assignment/snp_position.txt
+
+The following code will tell us information about the data files (including their size), then we will importe the data files as data frames and inspect the data frame dimensions. The command "View" allow us to have an overview of the file and become familiar with the several variables of the data sets.
+
+```{r, warning = FALSE}
+file.info("fang_et_al_genotypes.txt")
+file.info("snp_position.txt")
+
+fang_data <- read.table("fang_et_al_genotypes.txt", h=T, stringsAsFactors = FALSE)
+snppos <- read.table("snp_position.txt", h=T, sep = "\t", stringsAsFactors = FALSE)
+View(fang_data)
+View(snppos)
+
+dim(fang_data)
+dim(snppos)
+
+typeof(fang_data)
+typeof(snppos)
+class(fang_data)
+class(snppos)
+```
+As expected we have data frames and fang_et_al_genotypes.txt is a large file with many rows and colums. We will inspect some elements from the SNPs information file that will be important for later.
+
+```{r, warning = FALSE}
+str(snppos$Chromosome)
+str(snppos$Position)
+levels(snppos$Chromosome)
+levels(snppos$Position)
+```
+
+We learn from this that "multiple" and "unknown" are part of the data set and we will need to get ride of these for the first part of the exercise.
+
+## Select wanted groups in the transposed fang_et_al_genotypes.txt
+
+"When you start copying several time the same code, you are doing something wrong"
+  - Denis Lavrov, 10/13/2017
+
+My first attempt was to split the SNPs ID and positions first by chromosome and then merging these object with the maize and teosinte genotype data frame. Each of these new object would then be saved into a file. It was working but a lot of codes. The following is more efficient and quicker.
+
+To keep the headers after transposing the genotype data sets we will re-importe the genotype data file without headers. They will be re-attach to the data frame later.
+
+```{r, warning = FALSE}
+fang_data <- read.table("fang_et_al_genotypes.txt", h=F)
+```
+Then we will separate the maize genotypes and teosinte genotypes that we need for this part of the exercise.
+
+```{r, warning = FALSE}
+levels(fang_data$V3)
+maize_genotypes <- fang_data[fang_data$V3=="Group" | fang_data$V3=="ZMMIL" | fang_data$V3=="ZMMLR" | fang_data$V3=="ZMMMR",] 
+teosinte_genotypes<- fang_data[fang_data$V3=="Group" | fang_data$V3=="ZMPBA" | fang_data$V3=="ZMPIL" | fang_data$V3=="ZMPJA",]
+```
+## Maize and Teosinte SNPs data transposition
+
+```{r, warning = FALSE}
+t_maize_genotypes <- t(maize_genotypes)
+colnames(t_maize_genotypes) <- t_maize_genotypes[1,]
+t_maize_genotypes <- t_maize_genotypes[-1,]
+
+t_teosinte_genotypes <- t(teosinte_genotypes)
+colnames(t_teosinte_genotypes) <- t_teosinte_genotypes[1,]
+t_teosinte_genotypes <- t_teosinte_genotypes[-1,]
+```
+
+## Merging the Maize and Teosinte genotypes to SNPs information file
+
+```{r, warning = FALSE}
+maize_merg <- merge(snppos, t_maize_genotypes, by.x="SNP_ID", by.y="Sample_ID")
+teosinte_merg <- merge(snppos, t_teosinte_genotypes, by.x="SNP_ID", by.y="Sample_ID")
+```
+
+## Cleaning and ordering the data sets and replacing missing values
+
+```{r, warning = FALSE}
+maize_merg_asc <- maize_merg[, -c(2,5,6,7,8,9,10,11,12,13,14,15)]
+maize_merg_asc <- maize_merg_asc[!maize_merg$Chromosome == "unknown", ]
+maize_merg_asc <- maize_merg_asc[!maize_merg_asc$Chromosome == "multiple",]
+maize_merg_asc <- maize_merg_asc[!maize_merg_asc$Position == "multiple",]
+maize_merg_asc <- maize_merg_asc[order(as.numeric(as.character(maize_merg_asc$Position))), ]
+maize_merg_asc$Chromosome <- as.factor(as.character(maize_merg_asc$Chromosome))
+levels(maize_merg_asc$Chromosome)
+
+teosinte_merg_asc <- teosinte_merg[ , -c(2,5,6,7,8,9,10,11,12,13,14,15)]
+teosinte_merg_asc <- teosinte_merg_asc <- teosinte_merg_asc[!teosinte_merg_asc$Chromosome == "unknown",]
+teosinte_merg_asc <- teosinte_merg_asc <- teosinte_merg_asc[!teosinte_merg_asc$Chromosome == "multiple",]
+teosinte_merg_asc <- teosinte_merg_asc <- teosinte_merg_asc[!teosinte_merg_asc$Position == "multiple",]
+teosinte_merg_asc <- teosinte_merg_asc[order(as.numeric(as.character(teosinte_merg_asc$Position))), ]
+teosinte_merg_asc$Chromosome <- as.factor(as.character(teosinte_merg_asc$Chromosome))
+levels(teosinte_merg_asc$Chromosome)
+
+maize_merg_dec <- maize_merg_asc[order(as.numeric(as.character(maize_merg_asc$Position)), decreasing = TRUE), ]
+maize_merg_dec[sapply(maize_merg_dec, is.factor)] <- lapply(maize_merg_dec[sapply(maize_merg_dec, is.factor)], as.character)
+maize_merg_dec[maize_merg_dec== "?/?"] <- "-/-"
+
+teosinte_merg_dec <- maize_merg_asc[order(as.numeric(as.character(maize_merg_asc$Position)), decreasing = TRUE), ]
+teosinte_merg_dec[sapply(teosinte_merg_dec, is.factor)] <- lapply(teosinte_merg_dec[sapply(teosinte_merg_dec, is.factor)], as.character)
+teosinte_merg_dec[teosinte_merg_dec== "?/?"] <- "-/-"
+```
+
+## Split and Make files
+
+Now we have 4 data frames, 2 maize genotypes and 2 teosinte genotypes including SNP IDs, chromosome positions and positions in 2 different order. We will use the "split" and "lapply" functions to generate files in the working directory.
+
+* 20 Maize Files 
+
+  1 10 files (1 for each chromosome) with SNPs ordered based on increasing position values and with missing data encoded by this symbol: ?
+
+```{r, warning = FALSE}
+t_maize_split <- split(maize_merg_asc, maize_merg_asc$Chromosome)
+lapply(names(t_maize_split), function(x){write.table(t_maize_split[[x]], file = paste("chr", x, "_maize_ascending.txt", sep = ""), sep = "\t", row.names=FALSE)})
+```
+
+  2 10 files (1 for each chromosome) with SNPs ordered based on decreasing position values and with missing data encoded by this symbol: -
+
+```{r, warning = FALSE}
+t_maize_split <- split(maize_merg_dec, maize_merg_dec$Chromosome)
+lapply(names(t_maize_split), function(x){write.table(t_maize_split[[x]], file = paste("chr", x, "_maize_descending.txt", sep = ""), sep = "\t", row.names=FALSE)})
+```
+
+* 20 Teosinte Files 
+
+  1 10 files (1 for each chromosome) with SNPs ordered based on increasing position values and with missing data encoded by this symbol: ?
+
+```{r, warning = FALSE}
+t_teosinte_split <- split(teosinte_merg_asc, teosinte_merg_asc$Chromosome)
+lapply(names(t_teosinte_split), function(x){write.table(t_teosinte_split[[x]], file = paste("chr", x, "_teosinte_ascending.txt", sep = ""), sep = "\t", row.names=FALSE)})
+```
+
+  2 10 files (1 for each chromosome) with SNPs ordered based on decreasing position values and with missing data encoded by this symbol: -
+
+```{r, warning = FALSE}
+t_teosinte_split <- split(teosinte_merg_dec, teosinte_merg_dec$Chromosome)
+lapply(names(t_teosinte_split), function(x){write.table(t_teosinte_split[[x]], file = paste("chr", x, "_teosinte_descending.txt", sep = ""), sep = "\t", row.names=FALSE)})
+```
+
+# Part 2
+
+## SNPs per chromosome
+
+First let's look at how many SNPs loci are on each chromosome. We just need the SNPs position file and melt the Chromosome with the SNP_ID columns.
+
+```{r, echo=FALSE, warning = FALSE}
+snpch <- snppos[, c(1,3)]
+snpch <- melt(snpch, id = "Chromosome")
+
+ggplot(snpch, aes(Chromosome)) + geom_bar(aes(fill = Chromosome)) + 
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) + 
+  labs(title = "Number of SNPs loci per chromosome", x = "Chromosome", y = "SNPs loci Count") +
+  scale_x_discrete(limits=c(1,2,3,4,5,6,7,8,9,10)) +
+  scale_fill_discrete(name="Chromosome",breaks=c(1,2,3,4,5,6,7,8,9,10)) +
+  theme(legend.position=c(0.9, 0.7), legend.key.size = unit(0.25, "cm"))
+
+```
+
+To see all the SNPs genotyped across all the samples on the chromosomes we need to merge the whole SNPs data set and remove missing data.
+
+```{r, echo=FALSE, warning = FALSE}
+fang_data <- read.table("fang_et_al_genotypes.txt", h=F)
+t_fang <- t(fang_data)
+colnames(t_fang) <- t_fang[1,]
+t_fang <- t_fang[-1,]
+total_merg <- merge(snppos, t_fang, by.x="SNP_ID", by.y="Sample_ID")
+total_merg <- total_merg[ , -c(2,4,5,6,7,8,9,10,11,12,13,14,15)]
+total_merg <- total_merg[!total_merg$Chromosome == "multiple",]
+total_merg <- total_merg[!total_merg$Chromosome == "unknown",]
+total_melt <- melt(total_merg, id=c("SNP_ID", "Chromosome"))
+total_melt <- total_melt[!total_melt$value == "?/?",]
+
+ggplot(total_melt, aes(Chromosome)) + geom_bar(aes(fill = Chromosome)) + 
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) + 
+  labs(title = "Number of SNPs genotyped per chromosome", x = "Chromosome", y = "SNPs Count") +
+  scale_x_discrete(limits=c(1,2,3,4,5,6,7,8,9,10)) +
+  scale_fill_discrete(name="Chromosome",breaks=c(1,2,3,4,5,6,7,8,9,10)) +
+  theme(legend.position=c(0.9, 0.7), legend.key.size = unit(0.25, "cm"))
+```
+
+The SNPs count per chromosome across samples (not including the missing value) follow the same tendency then the number of loci per chromosome, meaning that there seem not to be more missing values on particular chromosomes compared to others.
+
+###  What groups contribute most of these SNPs?
+
+To answer this question we will need to create subsets of the genotype data file. There was probably a solution with the command "apply" but I couldn't find a way less tidious than the following one.
+JS: Code failed to run the first time in this next block, but ran the second. Not sure why.  
+Could be shorter by using for loop and a list of groups (TRIPS, etc.)
+
+```{r, warning = FALSE}
+fang_data <- read.table("fang_et_al_genotypes.txt", h=F)
+snppos <- read.table("snp_position.txt", h=T, sep = "\t")
+fang_split <- split(fang_data, fang_data$V3)
+
+TRIPS <- rbind(fang_split[[1]],fang_split[[2]])
+TRIPS <- t(TRIPS)
+colnames(TRIPS) <- TRIPS[1,]
+TRIPS <- TRIPS[-1,]
+TRIPS <- merge(snppos, TRIPS, by.x="SNP_ID", by.y="Sample_ID")
+TRIPS <- TRIPS[, -c(1,2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+TRIPS$Group <- "TRIPS"
+TRIPS2 <- melt(TRIPS, id = c("Group", "Chromosome"))
+
+ZDIPL <- rbind(fang_split[[1]], fang_split[[3]])
+ZDIPL <- t(ZDIPL)
+colnames(ZDIPL) <- ZDIPL[1,]
+ZDIPL <- ZDIPL[-1,]
+ZDIPL <- merge(snppos, ZDIPL, by.x="SNP_ID", by.y="Sample_ID")
+ZDIPL <- ZDIPL[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZDIPL$Group <- "ZDIPL"
+ZDIPL2 <- melt(ZDIPL, id = c("Chromosome", "Group"))
+
+ZLUXR <- rbind(fang_split[[1]],fang_split[[4]])
+ZLUXR <- t(ZLUXR)
+colnames(ZLUXR) <- ZLUXR[1,]
+ZLUXR <- ZLUXR[-1,]
+ZLUXR <- merge(snppos, ZLUXR, by.x="SNP_ID", by.y="Sample_ID")
+ZLUXR <- ZLUXR[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZLUXR$Group <- "ZLUXR"
+ZLUXR2 <- melt(ZLUXR, id = c("Chromosome", "Group"))
+
+ZMHUE <- rbind(fang_split[[1]],fang_split[[5]])
+ZMHUE <- t(ZMHUE)
+colnames(ZMHUE) <- ZMHUE[1,]
+ZMHUE <- ZMHUE[-1,]
+ZMHUE <- merge(snppos, ZMHUE, by.x="SNP_ID", by.y="Sample_ID")
+ZMHUE <- ZMHUE[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMHUE$Group <- "ZMHUE"
+ZMHUE2 <- melt(ZMHUE, id = c("Chromosome", "Group"))
+
+ZMMIL <- rbind(fang_split[[1]],fang_split[[6]])
+ZMMIL <- t(ZMMIL)
+colnames(ZMMIL) <- ZMMIL[1,]
+ZMMIL <- ZMMIL[-1,]
+ZMMIL <- merge(snppos, ZMMIL, by.x="SNP_ID", by.y="Sample_ID")
+ZMMIL <- ZMMIL[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMMIL$Group <- "ZMMIL"
+ZMMIL2 <- melt(ZMMIL, id = c("Chromosome", "Group"))
+
+ZMMLR <- rbind(fang_split[[1]],fang_split[[7]])
+ZMMLR <- t(ZMMLR)
+colnames(ZMMLR) <- ZMMLR[1,]
+ZMMLR <- ZMMLR[-1,]
+ZMMLR <- merge(snppos, ZMMLR, by.x="SNP_ID", by.y="Sample_ID")
+ZMMLR <- ZMMLR[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMMLR$Group <- "ZMMLR"
+ZMMLR2 <- melt(ZMMLR, id = c("Chromosome", "Group"))
+
+ZMMMR <- rbind(fang_split[[1]],fang_split[[8]])
+ZMMMR <- t(ZMMMR)
+colnames(ZMMMR) <- ZMMMR[1,]
+ZMMMR <- ZMMMR[-1,]
+ZMMMR <- merge(snppos, ZMMMR, by.x="SNP_ID", by.y="Sample_ID")
+ZMMMR <- ZMMMR[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMMMR$Group <- "ZMMMR"
+ZMMMR2 <- melt(ZMMMR, id = c("Chromosome", "Group"))
+
+ZMPBA <- rbind(fang_split[[1]],fang_split[[9]])
+ZMPBA <- t(ZMPBA)
+colnames(ZMPBA) <- ZMPBA[1,]
+ZMPBA <- ZMPBA[-1,]
+ZMPBA <- merge(snppos, ZMPBA, by.x="SNP_ID", by.y="Sample_ID")
+ZMPBA <- ZMPBA[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMPBA$Group <- "ZMPBA"
+ZMPBA2 <- melt(ZMPBA, id = c("Chromosome", "Group"))
+
+ZMPIL <- rbind(fang_split[[1]],fang_split[[10]])
+ZMPIL <- t(ZMPIL)
+colnames(ZMPIL) <- ZMPIL[1,]
+ZMPIL <- ZMPIL[-1,]
+ZMPIL <- merge(snppos, ZMPIL, by.x="SNP_ID", by.y="Sample_ID")
+ZMPIL <- ZMPIL[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMPIL$Group <- "ZMPIL"
+ZMPIL2 <- melt(ZMPIL, id = c("Chromosome", "Group"))
+
+ZMPJA <- rbind(fang_split[[1]],fang_split[[11]])
+ZMPJA <- t(ZMPJA)
+colnames(ZMPJA) <- ZMPJA[1,]
+ZMPJA <- ZMPJA[-1,]
+ZMPJA <- merge(snppos, ZMPJA, by.x="SNP_ID", by.y="Sample_ID")
+ZMPJA <- ZMPJA[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMPJA$Group <- "ZMPJA"
+ZMPJA2 <- melt(ZMPJA, id = c("Chromosome", "Group"))
+
+ZMXCH <- rbind(fang_split[[1]],fang_split[[12]])
+ZMXCH <- t(ZMXCH)
+colnames(ZMXCH) <- ZMXCH[1,]
+ZMXCH <- ZMXCH[-1,]
+ZMXCH <- merge(snppos, ZMXCH, by.x="SNP_ID", by.y="Sample_ID")
+ZMXCH <- ZMXCH[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMXCH$Group <- "ZMXCH"
+ZMXCH2 <- melt(ZMXCH, id = c("Chromosome", "Group"))
+
+ZMXCP <- rbind(fang_split[[1]],fang_split[[13]])
+ZMXCP <- t(ZMXCP)
+colnames(ZMXCP) <- ZMXCP[1,]
+ZMXCP <- ZMXCP[-1,]
+ZMXCP <- merge(snppos, ZMXCP, by.x="SNP_ID", by.y="Sample_ID")
+ZMXCP <- ZMXCP[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMXCP$Group <- "ZMXCP"
+ZMXCP2 <- melt(ZMXCP, id = c("Chromosome", "Group"))
+
+ZMXIL <- rbind(fang_split[[1]],fang_split[[14]])
+ZMXIL <- t(ZMXIL)
+colnames(ZMXIL) <- ZMXIL[1,]
+ZMXIL <- ZMXIL[-1,]
+ZMXIL <- merge(snppos, ZMXIL, by.x="SNP_ID", by.y="Sample_ID")
+ZMXIL <- ZMXIL[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMXIL$Group <- "ZMXIL"
+ZMXIL2 <- melt(ZMXIL, id = c("Chromosome", "Group"))
+
+ZMXNO <- rbind(fang_split[[1]],fang_split[[15]])
+ZMXNO <- t(ZMXNO)
+colnames(ZMXNO) <- ZMXNO[1,]
+ZMXNO <- ZMXNO[-1,]
+ZMXNO <- merge(snppos, ZMXNO, by.x="SNP_ID", by.y="Sample_ID")
+ZMXNO <- ZMXNO[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMXNO$Group <- "ZMXNO"
+ZMXNO2 <- melt(ZMXNO, id = c("Chromosome", "Group"))
+
+ZMXNT <- rbind(fang_split[[1]],fang_split[[16]])
+ZMXNT <- t(ZMXNT)
+colnames(ZMXNT) <- ZMXNT[1,]
+ZMXNT <- ZMXNT[-1,]
+ZMXNT <- merge(snppos, ZMXNT, by.x="SNP_ID", by.y="Sample_ID")
+ZMXNT <- ZMXNT[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZMXNT$Group <- "ZMXNT"
+ZMXNT2 <- melt(ZMXNT, id = c("Chromosome", "Group"))
+
+ZPERR <- rbind(fang_split[[1]],fang_split[[17]])
+ZPERR <- t(ZPERR)
+colnames(ZPERR) <- ZPERR[1,]
+ZPERR <- ZPERR[-1,]
+ZPERR <- merge(snppos, ZPERR, by.x="SNP_ID", by.y="Sample_ID")
+ZPERR <- ZPERR[, -c(2,4,5,6,7,8,9,10,11,12,13,14,15,16)]
+ZPERR$Group <- "ZPERR"
+ZPERR2 <- melt(ZPERR, id = c("Chromosome", "Group"))
+```
+
+```{r, echo=FALSE, warning = FALSE}
+Groups_melt <- rbind(TRIPS2, ZDIPL2, ZLUXR2, ZMHUE2, ZMMIL2, ZMMLR2, ZMMMR2, ZMPBA2, ZMPIL2, ZMPJA2, ZMXCH2, ZMXCP2, ZMXIL2, ZMXNO2, ZMXNT2, ZPERR2)
+Groups_melt <- Groups_melt[!Groups_melt$Chromosome == "unknown",]
+Groups_melt <- Groups_melt[!Groups_melt$Chromosome == "multiple",]
+Groups_melt2 <- Groups_melt[!Groups_melt$value == "?/?",]
+ggplot(Groups_melt2, aes(Chromosome)) + geom_bar(aes(fill = Group), position=position_dodge()) + 
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) + 
+  labs(title = "Number of SNPs per chromosome and per group", x = "Chromosome", y = "SNPs Count") +
+  scale_x_discrete(limits=c(1,2,3,4,5,6,7,8,9,10))
+
+```
+
+
+Now we can visualize the number of SNPs per group. Not surprisingly the groups with more samples have the more numerous number of SNPs. 
+
+
+
+## Missing data and amount of heterozygosity
+
+To realize this we will only need to importe the genotype data set and replace the genotypes and missing values with homozygosity, heterozygosity and NAs. This will be done by the following code, as well as renaming the groups into species and formating the data set in order to plot the heterozygosity per species.
+
+```{r, warning = FALSE}
+fang_data <- read.table("fang_et_al_genotypes.txt", h=T)
+fang_data <- fang_data[, -2]
+fang_melt <- melt(fang_data, id.vars = c("Sample_ID", "Group"))
+value <- fang_melt$value
+group <- fang_melt$Group
+
+fang_melt[fang_melt == "A/A" | fang_melt == "C/C" | fang_melt == "G/G" | fang_melt == "T/T"] <- "0"
+fang_melt[fang_melt == "A/T" | fang_melt == "A/G" | fang_melt == "G/C" | fang_melt == "G/A" | fang_melt == "G/T" | fang_melt == "C/A" | fang_melt == "C/T" | fang_melt == "C/G" | fang_melt == "T/A" | fang_melt == "T/C" | fang_melt == "T/G" | fang_melt == "A/C"] <- "1"
+fang_melt[fang_melt == "?/?"] <- NA
+fang_melt$heterozygosity <- value
+
+
+fang_melt_f <- fang_melt
+fang_melt_f[sapply(fang_melt_f, is.factor)] <- lapply(fang_melt_f[sapply(fang_melt_f, is.factor)], as.character)
+fang_melt_f[fang_melt_f == "ZMMIL" | fang_melt_f == "ZMMLR" | fang_melt_f == "ZMMMR"] <- "maize"
+fang_melt_f[fang_melt_f == "ZMPBA" | fang_melt_f == "ZMPIL" | fang_melt_f == "ZMPJA"] <- "teosinte"
+fang_melt_f[fang_melt_f == "TRIPS" | fang_melt_f == "ZDIPL" | fang_melt_f == "ZMHUE" | fang_melt_f == "ZLUXR" | fang_melt_f == "ZMXCH" | fang_melt_f == "ZMXCP" | fang_melt_f == "ZMXIL" | fang_melt_f == "ZMXCP" | fang_melt_f == "ZMXNO" | fang_melt_f == "ZMXNT" | fang_melt_f == "ZPERR"] <- "tripsacum"
+fang_melt_f$Group2 <- group
+
+colnames(fang_melt_f) <- c("Sample_ID", "Species", "Variable", "Heterozygosity", "Value", "Group")
+```
+
+```{r, echo=FALSE, warning = FALSE}
+ggplot(fang_melt_f, aes(x = Group, fill = Heterozygosity)) + 
+  geom_bar(position = "fill") + 
+  facet_grid(Species ~ .) +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(angle = 45, vjust = 0.5)) + 
+  labs(title = "SNPs proportions per species", y = "Heterozygosity proportion") +
+  scale_y_continuous(labels = percent_format()) +
+  scale_fill_discrete(name="Genoptypes", breaks=c("0", "1", NA), labels=c("Homozygote", "Heterozygote", "Missing data")) +
+  scale_x_discrete(limits=c("ZMMIL", "ZMMLR", "ZMMMR", "ZMPBA", "ZMPIL", "ZMPJA", "TRIPS", "ZDIPL", "ZLUXR", "ZMHUE", "ZMXCH", "ZMXCP", "ZMXIL", "ZMXNO", "ZMXNT", "ZPERR"))
+```
+
+
+## Your own visualization
+
+Finally I want to plot the density of heterozygoty and missing values on the chromosome positions. This will allow to see the SNPs positions on chromosomes, visualize regions of chromosomes that have a large amount of missing values or invariant sites. However here we are working with a published dataset that has already been filtered (I assume so), so we are not expecting many invariant sites or large missing data regions.
+
+```{r, warning = FALSE}
+total_merg_c <- merge(snppos, t_fang, by.x="SNP_ID", by.y="Sample_ID")
+total_merg_c <- total_merg_c[, - c(2,5,6,7,8,9,10,11,12,13,14,15)]
+total_merg_c_melt <- melt(total_merg_c, id = c("SNP_ID", "Chromosome", "Position"))
+
+value2 <- total_merg_c_melt$value
+total_merg_c_melt[total_merg_c_melt == "A/A" | total_merg_c_melt == "C/C" | total_merg_c_melt == "G/G" | total_merg_c_melt == "T/T"] <- "0"
+total_merg_c_melt[total_merg_c_melt == "A/T" | total_merg_c_melt == "A/G" | total_merg_c_melt == "G/C" | total_merg_c_melt == "G/A" | total_merg_c_melt == "G/T" | total_merg_c_melt == "C/A" | total_merg_c_melt == "C/T" | total_merg_c_melt == "C/G" | total_merg_c_melt == "T/A" | total_merg_c_melt == "T/C" | total_merg_c_melt == "T/G" | total_merg_c_melt == "A/C"] <- "1"
+total_merg_c_melt[total_merg_c_melt == "?/?"] <- "NA"
+total_merg_c_melt <- total_merg_c_melt[!total_merg_c_melt$Chromosome == "multiple",]
+total_merg_c_melt <- total_merg_c_melt[!total_merg_c_melt$Chromosome == "unknown",]
+total_merg_c_melt <- total_merg_c_melt[!total_merg_c_melt$Position == "multiple",]
+
+total_merg_c_melt$Position <- as.numeric(as.character(total_merg_c_melt$Position))
+summary(total_merg_c_melt$Position)
+total_merg_c_melt$Chromosome = factor(total_merg_c_melt$Chromosome, levels=c('1','2','3','4','5','6','7','8','9','10'))
+
+```
+
+```{r, echo=FALSE, warning = FALSE}
+ggplot(total_merg_c_melt, aes(x = Position)) + geom_density(aes(linetype=value, color=value)) + 
+  facet_wrap( ~ Chromosome, ncol=5) +
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(angle = 45, vjust = 0.5), axis.text.y = element_text(angle = 90)) +
+  scale_linetype_discrete(name="Genoptypes", breaks=c("0", "1", "NA"), labels=c("Homozygote", "Heterozygote", "Missing data")) +
+  scale_color_discrete(name="Genoptypes", breaks=c("0", "1", "NA"), labels=c("Homozygote", "Heterozygote", "Missing data")) +
+  scale_x_continuous(breaks = c(0, 150000000, 300000000),labels = scales::comma) +
+  labs(title = "SNPs positions on Chromosomes", x = "Position on chromosomes",  y = "Density")
+```
+
+## The End!
+
+## The magic code if "stringAsFactor = False" was missing:
+
+```{r}
+df[sapply(df, is.factor)] <- lapply(df[sapply(df, is.factor)], as.character)
+```
+
+
+JS Review: All the graphs look great, and the code runs as intended.
