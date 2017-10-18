@@ -1,0 +1,8 @@
+Review for Finn
+
+-Ran into error when merging snppos and TRIPS
+-Object ZDIPL not found
+	-Both fixed upon rerunning that block of code, not sure what happened
+This chunk of code (Lines 207-355) could've been reduced in size with a for loop using a list of groups
+
+Graphs looked good and code ended up running properly with rerun of the one block.
